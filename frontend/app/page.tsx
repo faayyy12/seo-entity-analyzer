@@ -124,10 +124,10 @@ export default function Home() {
                           {r.title}
                         </a>
                       </td>
-                      <td className="px-6 py-4 font-semibold">{r.entity_count === 0 ? "—" : r.entity_count}</td>
+                      <td className="px-6 py-4 font-semibold text-blue-600">{r.entity_count === 0 ? "—" : r.entity_count}</td>
                       <td className="px-6 py-4 text-gray-500 text-xs">
                         {Object.entries(r.top_entities).map(([name, count]) => (
-                          <span key={name} className="inline-block bg-blue-500 text-white rounded px-2 py-0.5 mr-1 mb-1">
+                          <span key={name} className="inline-block bg-blue-50 text-blue-700 rounded px-2 py-0.5 mr-1 mb-1">
                             {name} ({count})
                           </span>
                         ))}
