@@ -5,3 +5,4 @@ beautifulsoup4
 spacy
 supabase
 python-dotenv
+groq
