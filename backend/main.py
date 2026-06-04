@@ -30,9 +30,20 @@ supabase = create_client(
 class SearchRequest(BaseModel):
     keyword: str
 
+def _truncate_entity(text):
+    # Strip Chinese bracket characters
+    text = text.strip("【】")
+    # Determine if mostly Chinese (Unicode CJK block)
+    chinese_chars = sum(1 for c in text if '一' <= c <= '鿿')
+    if chinese_chars > len(text) / 2:
+        return text[:8]
+    # English/numbers: keep up to 3 words
+    words = text.split()
+    return " ".join(words[:3])
+
 def extract_entities(text):
     doc = nlp(text[:10000])
-    entities = [(ent.text[:8] if len(ent.text) > 8 else ent.text, ent.label_) for ent in doc.ents]
+    entities = [(_truncate_entity(ent.text), ent.label_) for ent in doc.ents]
     return entities
 
 def scrape_article(url):
