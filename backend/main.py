@@ -3,11 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import requests
 from bs4 import BeautifulSoup
-import spacy
+from groq import Groq
 from collections import Counter
+import json
 from supabase import create_client
 from dotenv import load_dotenv
 import os
+import unicodedata
 
 load_dotenv()
 
@@ -20,7 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-nlp = spacy.load("en_core_web_sm")
+groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 supabase = create_client(
     os.getenv("SUPABASE_URL"),
@@ -41,10 +43,45 @@ def _truncate_entity(text):
     words = text.split()
     return " ".join(words[:3])
 
+def _is_valid_entity(text):
+    stripped = text.strip()
+    if len(stripped) <= 1:
+        return False
+    if stripped.isdigit():
+        return False
+    if all(unicodedata.category(c) in ('Po', 'Ps', 'Pe', 'Pi', 'Pf', 'Pd', 'Pc', 'So', 'Sm', 'Sk', 'Sc', 'Zs') or not c.isalnum() for c in stripped):
+        return False
+    return True
+
 def extract_entities(text):
-    doc = nlp(text[:10000])
-    entities = [(_truncate_entity(ent.text), ent.label_) for ent in doc.ents]
-    return entities
+    try:
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{
+                "role": "user",
+                "content": (
+                    "Extract all named entities from this text. Return ONLY a JSON array in this format: "
+                    '[{"text": "entity name", "label": "ENTITY_TYPE"}]. '
+                    "Use these labels: PERSON, ORG, GPE, DATE, MONEY, PRODUCT, CARDINAL. "
+                    f"Text: {text[:10000]}"
+                )
+            }],
+            temperature=0,
+        )
+        raw = response.choices[0].message.content.strip()
+        # Strip markdown code fences if present
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        parsed = json.loads(raw)
+        return [
+            (_truncate_entity(item["text"]), item["label"])
+            for item in parsed
+            if isinstance(item, dict) and _is_valid_entity(item.get("text", ""))
+        ]
+    except Exception:
+        return []
 
 def scrape_article(url):
     try:
