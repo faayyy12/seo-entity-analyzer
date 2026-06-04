@@ -32,7 +32,7 @@ class SearchRequest(BaseModel):
 
 def extract_entities(text):
     doc = nlp(text[:10000])
-    entities = [(" ".join(ent.text.split()[:3]), ent.label_) for ent in doc.ents]
+    entities = [(ent.text[:8] if len(ent.text) > 8 else ent.text, ent.label_) for ent in doc.ents]
     return entities
 
 def scrape_article(url):
