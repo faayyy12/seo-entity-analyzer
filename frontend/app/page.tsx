@@ -14,9 +14,20 @@ interface ArticleResult {
 
 interface AnalysisResult {
   keyword: string;
+  domain: string;
   results: ArticleResult[];
   clusters: Record<string, Record<string, number>>;
 }
+
+const DOMAIN_COLORS: Record<string, string> = {
+  telecom:   "bg-indigo-100 text-indigo-700",
+  ecommerce: "bg-orange-100 text-orange-700",
+  finance:   "bg-green-100  text-green-700",
+  health:    "bg-rose-100   text-rose-700",
+  tech:      "bg-blue-100   text-blue-700",
+  travel:    "bg-cyan-100   text-cyan-700",
+  general:   "bg-gray-100   text-gray-600",
+};
 
 export default function Home() {
   const [keyword, setKeyword] = useState("");
@@ -45,7 +56,7 @@ export default function Home() {
       });
       const json = await res.json();
       setData(json);
-    } catch (e) {
+    } catch {
       setError("Failed to connect to backend.");
     } finally {
       setLoading(false);
@@ -57,18 +68,18 @@ export default function Home() {
       <div className="max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">SEO Entity Analyzer</h1>
         <p className="text-gray-500 mb-8">Analyze entities from Google top 10 results</p>
-        
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={async () => {
-            await supabase.auth.signOut();
-            router.push("/login");
-          }}
-          className="text-sm text-gray-500 hover:text-red-500 transition"
-        >
-          Sign Out
-        </button>
-      </div>
+
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut();
+              router.push("/login");
+            }}
+            className="text-sm text-gray-500 hover:text-red-500 transition"
+          >
+            Sign Out
+          </button>
+        </div>
 
         {/* Search Input */}
         <div className="flex gap-3 mb-8">
@@ -99,6 +110,21 @@ export default function Home() {
 
         {data && (
           <>
+            {/* Detected domain badge */}
+            <div className="flex items-center gap-2 mb-6">
+              <span className="text-sm text-gray-500">Detected domain:</span>
+              <span
+                className={`text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wide ${
+                  DOMAIN_COLORS[data.domain] ?? DOMAIN_COLORS.general
+                }`}
+              >
+                {data.domain}
+              </span>
+              <span className="text-xs text-gray-400">
+                — entity schema applied for this vertical
+              </span>
+            </div>
+
             {/* Results Table */}
             <div className="bg-white rounded-xl shadow mb-8 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-100">
@@ -124,7 +150,9 @@ export default function Home() {
                           {r.title}
                         </a>
                       </td>
-                      <td className="px-6 py-4 font-semibold text-blue-600">{r.entity_count === 0 ? "—" : r.entity_count}</td>
+                      <td className="px-6 py-4 font-semibold text-blue-600">
+                        {r.entity_count === 0 ? "—" : r.entity_count}
+                      </td>
                       <td className="px-6 py-4 text-gray-500 text-xs">
                         {Object.entries(r.top_entities).map(([name, count]) => (
                           <span key={name} className="inline-block bg-blue-50 text-blue-700 rounded px-2 py-0.5 mr-1 mb-1">
